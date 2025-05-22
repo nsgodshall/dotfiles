@@ -18,11 +18,6 @@ if [ ! -d "$HOME/.fzf" ]; then
   ~/.fzf/install --key-bindings --completion --no-update-rc
 fi
 
-# Install fnm
-if [ ! -d "$HOME/.local/share/fnm" ]; then
-  curl -fsSL https://fnm.vercel.app/install | bash
-fi
-
 
 # Activate new zshrc
 source ~/.zshrc
