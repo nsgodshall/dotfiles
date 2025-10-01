@@ -38,12 +38,10 @@ export SAVEHIST=$HISTSIZE
 setopt EXTENDED_HISTORY
 setopt HIST_EXPIRE_DUPS_FIRST
 setopt HIST_FIND_NO_DUPS
-setopt HIST_IGNORE_ALL_DUPS
-setopt HIST_IGNORE_DUPS
 setopt HIST_IGNORE_SPACE
 setopt HIST_SAVE_NO_DUPS
 setopt SHARE_HISTORY
-
+ZSH_AUTOSUGGEST_STRATEGY=(match_prev_cmd completion)
 # -----------------------------
 # Shell Options
 # -----------------------------
@@ -106,6 +104,7 @@ alias docker-restart="sudo docker compose down && sudo docker system prune -f &&
 alias formatting="cd ~/MAPPy/dev/llm-engine/scripts/ && ~/MAPPy/dev/llm-engine/scripts/pass_lint.sh && cd -"
 alias update="sudo apt-get update && sudo apt-get upgrade -y"
 alias ls='ls --color=auto'
+alias v='nvim'
 export LS_COLORS='di=1;34:ln=36:so=32:pi=33:ex=31:bd=34;46:cd=34;43'
 
 # -----------------------------
@@ -123,3 +122,12 @@ fi
 # Install Ruby Gems to ~/gems
 export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
+
+source /usr/share/doc/fzf/examples/key-bindings.zsh
+
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - bash)"
+export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
+bindkey -v
+setopt CORRECT
