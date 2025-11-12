@@ -264,10 +264,12 @@ main() {
         link_dotfile "$DOTFILES_DIR/tmux.conf" "$HOME/.tmux.conf" "tmux.conf"
     fi
     
-    if [ -f "$DOTFILES_DIR/init.lua" ]; then
-        # Create nvim config directory if it doesn't exist
-        mkdir -p "$HOME/.config/nvim"
-        link_dotfile "$DOTFILES_DIR/init.lua" "$HOME/.config/nvim/init.lua" "nvim/init.lua"
+    if [ -d "$DOTFILES_DIR/nvim" ]; then
+      link_dotfile "$DOTFILES_DIR/nvim" "$HOME/.config/nvim" "nvim (entire dir)"
+    elif [ -f "$DOTFILES_DIR/init.lua" ]; then
+      # Fallback: just init.lua (not recommended for Kickstart layouts)
+      mkdir -p "$HOME/.config/nvim"
+      link_dotfile "$DOTFILES_DIR/init.lua" "$HOME/.config/nvim/init.lua" "nvim/init.lua"
     fi
     
     # Install dependencies

@@ -38,6 +38,13 @@ export HISTFILE="$HISTDIR/history"
 export HISTSIZE=5000000
 export SAVEHIST=$HISTSIZE
 
+# Migrate history from old location if it exists and new location is empty/small
+if [[ -f ~/.hist_zsh ]] && [[ -s ~/.hist_zsh ]]; then
+  if [[ ! -f "$HISTFILE" ]] || [[ $(wc -l < "$HISTFILE" 2>/dev/null || echo 0) -lt 10 ]]; then
+    cp ~/.hist_zsh "$HISTFILE" 2>/dev/null && echo "Migrated history from ~/.hist_zsh"
+  fi
+fi
+
 setopt EXTENDED_HISTORY          # Save timestamp and duration
 setopt HIST_EXPIRE_DUPS_FIRST    # Expire duplicate entries first
 setopt HIST_FIND_NO_DUPS          # Don't show duplicates in search
