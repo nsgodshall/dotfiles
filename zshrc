@@ -73,20 +73,29 @@ bindkey '^h' backward-delete-char  # Ctrl+h works like backspace
 bindkey '^w' backward-kill-word    # Ctrl+w deletes word backward
 bindkey '^r' history-incremental-search-backward  # Ctrl+r for history search
 
-# Vi mode cursor shape (if terminal supports it)
-# Insert mode: beam cursor
+# Vi mode cursor shape and prompt update
+# Powerlevel10k automatically changes the prompt character:
+#   Insert mode: » (configured in p10k.zsh)
+#   Normal mode: ❮ (configured in p10k.zsh)
+# This function just handles cursor shape and ensures prompt updates
 function zle-keymap-select {
-  if [[ ${KEYMAP} == vicmd ]] || [[ $1 = 'block' ]]; then
-    echo -ne '\e[1 q'  # Block cursor in normal mode
-  elif [[ ${KEYMAP} == main ]] || [[ ${KEYMAP} == viins ]] || [[ ${KEYMAP} = '' ]] || [[ $1 = 'beam' ]]; then
-    echo -ne '\e[5 q'  # Beam cursor in insert mode
+  if [[ ${KEYMAP} == vicmd ]]; then
+    # Normal mode - block cursor
+    echo -ne '\e[1 q'  # Block cursor
+  elif [[ ${KEYMAP} == main ]] || [[ ${KEYMAP} == viins ]]; then
+    # Insert mode - beam cursor
+    echo -ne '\e[5 q'  # Beam cursor
   fi
+  # Force prompt update so p10k shows the correct character
+  zle reset-prompt
 }
 zle -N zle-keymap-select
 
-# Set initial cursor shape
+# Set initial cursor shape (insert mode)
 zle-line-init() {
-  echo -ne '\e[5 q'  # Beam cursor
+  echo -ne '\e[5 q'  # Beam cursor (insert mode)
+  # Ensure prompt is updated on new line
+  zle reset-prompt
 }
 zle -N zle-line-init
 
@@ -259,6 +268,8 @@ extract() {
 }
 
 # Project-specific formatting (if the path exists)
+# Unalias first in case it was defined as an alias elsewhere
+unalias formatting 2>/dev/null || true
 formatting() {
   local script_path="$HOME/MAPPy/dev/llm-engine/scripts/pass_lint.sh"
   if [[ -f "$script_path" ]]; then
