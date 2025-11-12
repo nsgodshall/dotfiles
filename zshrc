@@ -59,10 +59,36 @@ setopt PUSHD_SILENT              # Don't print directory stack
 setopt CDABLE_VARS               # cd to variables
 unsetopt beep                    # Disable beep
 
-# Choose your keybinding mode (emacs or vi)
-# Uncomment the one you prefer:
-bindkey -e                       # Emacs mode (default)
-# bindkey -v                      # Vi mode
+# Vi mode keybindings
+bindkey -v                       # Vi mode
+# bindkey -e                      # Emacs mode (commented out)
+
+# Vi mode enhancements
+# Reduce delay when switching to normal mode (default is 0.4s)
+export KEYTIMEOUT=1
+
+# Better vi mode keybindings
+bindkey '^?' backward-delete-char  # Backspace works in insert mode
+bindkey '^h' backward-delete-char  # Ctrl+h works like backspace
+bindkey '^w' backward-kill-word    # Ctrl+w deletes word backward
+bindkey '^r' history-incremental-search-backward  # Ctrl+r for history search
+
+# Vi mode cursor shape (if terminal supports it)
+# Insert mode: beam cursor
+function zle-keymap-select {
+  if [[ ${KEYMAP} == vicmd ]] || [[ $1 = 'block' ]]; then
+    echo -ne '\e[1 q'  # Block cursor in normal mode
+  elif [[ ${KEYMAP} == main ]] || [[ ${KEYMAP} == viins ]] || [[ ${KEYMAP} = '' ]] || [[ $1 = 'beam' ]]; then
+    echo -ne '\e[5 q'  # Beam cursor in insert mode
+  fi
+}
+zle -N zle-keymap-select
+
+# Set initial cursor shape
+zle-line-init() {
+  echo -ne '\e[5 q'  # Beam cursor
+}
+zle -N zle-line-init
 
 # -----------------------------
 # Completion Setup
@@ -185,6 +211,8 @@ export LS_COLORS='di=1;34:ln=36:so=32:pi=33:ex=31:bd=34;46:cd=34;43'
 # Functions
 # -----------------------------
 # Docker functions (better than long aliases)
+# Unalias first in case they were defined as aliases elsewhere
+unalias docker-restart-hard 2>/dev/null || true
 docker-restart-hard() {
   sudo docker system prune -f -a && \
   sudo docker volume prune -f -a && \
@@ -194,6 +222,7 @@ docker-restart-hard() {
   sudo docker compose up --watch
 }
 
+unalias docker-restart 2>/dev/null || true
 docker-restart() {
   sudo docker compose down && \
   sudo docker system prune -f && \
