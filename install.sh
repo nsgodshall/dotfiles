@@ -53,23 +53,66 @@ log_info "Detected dotfiles directory: $DOTFILES_DIR"
 check_prerequisites() {
     log_info "Checking prerequisites..."
     
-    local missing_deps=()
+    local missing_required=()
+    local missing_optional=()
     
+    # Required dependencies (script will fail without these)
     if ! command -v git &> /dev/null; then
-        missing_deps+=("git")
+        missing_required+=("git")
     fi
     
     if ! command -v zsh &> /dev/null; then
-        missing_deps+=("zsh")
+        missing_required+=("zsh")
     fi
     
-    if [ ${#missing_deps[@]} -gt 0 ]; then
-        log_error "Missing required dependencies: ${missing_deps[*]}"
+    # Optional dependencies (script will warn but continue)
+    if [ -f "$DOTFILES_DIR/tmux.conf" ] && ! command -v tmux &> /dev/null; then
+        missing_optional+=("tmux")
+    fi
+    
+    if [ -f "$DOTFILES_DIR/init.lua" ] && ! command -v nvim &> /dev/null && ! command -v vim &> /dev/null; then
+        missing_optional+=("nvim (or vim)")
+    fi
+    
+    # Check for required dependencies
+    if [ ${#missing_required[@]} -gt 0 ]; then
+        log_error "Missing required dependencies: ${missing_required[*]}"
         log_error "Please install them before running this script"
+        echo ""
+        log_info "Installation suggestions:"
+        for dep in "${missing_required[@]}"; do
+            case "$dep" in
+                git)
+                    echo "  - Debian/Ubuntu: sudo apt-get install git"
+                    ;;
+                zsh)
+                    echo "  - Debian/Ubuntu: sudo apt-get install zsh"
+                    ;;
+            esac
+        done
         exit 1
     fi
     
-    log_success "All prerequisites met"
+    # Warn about optional dependencies
+    if [ ${#missing_optional[@]} -gt 0 ]; then
+        log_warning "Some optional tools are missing: ${missing_optional[*]}"
+        log_info "The script will continue, but some features may not work"
+        echo ""
+        log_info "Installation suggestions:"
+        for dep in "${missing_optional[@]}"; do
+            case "$dep" in
+                tmux)
+                    echo "  - Debian/Ubuntu: sudo apt-get install tmux"
+                    ;;
+                "nvim (or vim)")
+                    echo "  - Debian/Ubuntu: sudo apt-get install neovim"
+                    ;;
+            esac
+        done
+        echo ""
+    fi
+    
+    log_success "All required prerequisites met"
 }
 
 # Backup existing file if it exists and is not a symlink to our dotfiles

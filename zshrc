@@ -31,30 +31,53 @@ fi
 # -----------------------------
 # History Settings
 # -----------------------------
-export HISTFILE=~/.hist_zsh
+# Use XDG directory if available, fallback to home
+HISTDIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh"
+mkdir -p "$HISTDIR"
+export HISTFILE="$HISTDIR/history"
 export HISTSIZE=5000000
 export SAVEHIST=$HISTSIZE
 
-setopt EXTENDED_HISTORY
-setopt HIST_EXPIRE_DUPS_FIRST
-setopt HIST_FIND_NO_DUPS
-setopt HIST_IGNORE_SPACE
-setopt HIST_SAVE_NO_DUPS
-setopt SHARE_HISTORY
-ZSH_AUTOSUGGEST_STRATEGY=(match_prev_cmd )
+setopt EXTENDED_HISTORY          # Save timestamp and duration
+setopt HIST_EXPIRE_DUPS_FIRST    # Expire duplicate entries first
+setopt HIST_FIND_NO_DUPS          # Don't show duplicates in search
+setopt HIST_IGNORE_SPACE          # Ignore commands starting with space
+setopt HIST_SAVE_NO_DUPS          # Don't save duplicates
+setopt SHARE_HISTORY              # Share history between sessions
+ZSH_AUTOSUGGEST_STRATEGY=(match_prev_cmd)
+
 # -----------------------------
 # Shell Options
 # -----------------------------
-setopt autocd extendedglob nomatch notify
-unsetopt beep
-bindkey -e
+setopt autocd                    # cd to directory by typing its name
+setopt extendedglob              # Extended globbing
+setopt nomatch                   # Error if no match
+setopt notify                    # Report job status immediately
+setopt AUTO_PUSHD                # cd pushes to directory stack
+setopt PUSHD_IGNORE_DUPS         # Don't push duplicates
+setopt PUSHD_SILENT              # Don't print directory stack
+setopt CDABLE_VARS               # cd to variables
+unsetopt beep                    # Disable beep
+
+# Choose your keybinding mode (emacs or vi)
+# Uncomment the one you prefer:
+bindkey -e                       # Emacs mode (default)
+# bindkey -v                      # Vi mode
 
 # -----------------------------
 # Completion Setup
 # -----------------------------
-zstyle :compinstall filename '/home/godshall/.zshrc'
+# Use XDG directory for completion cache
+COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-$ZSH_VERSION"
+zstyle :compinstall filename "$HOME/.zshrc"
+
+# Only run compinit if cache is older than 24 hours or missing
 autoload -Uz compinit
-compinit
+if [[ -n ${COMPDUMP}(#qN.mh+24) ]]; then
+  compinit -d "$COMPDUMP"
+else
+  compinit -C -d "$COMPDUMP"
+fi
 
 # -----------------------------
 # Zinit Plugin Manager
@@ -96,50 +119,136 @@ zinit light junegunn/fzf
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
 
 # -----------------------------
-# Aliases
+# PATH Management
 # -----------------------------
-alias history='fc -il 1'
-alias docker-restart-hard="sudo docker system prune -f -a && sudo docker volume prune -f -a && sudo docker compose down && sudo docker system prune -f && sudo docker compose build && sudo docker compose up --watch"
-alias docker-restart="sudo docker compose down && sudo docker system prune -f && sudo docker compose up --build --watch && sleep 5 && curl localhost:3000"
-alias formatting="cd ~/MAPPy/dev/llm-engine/scripts/ && ~/MAPPy/dev/llm-engine/scripts/pass_lint.sh && cd -"
-alias update="sudo apt-get update && sudo apt-get upgrade -y"
-alias ls='ls --color=auto'
-alias v='nvim'
-export LS_COLORS='di=1;34:ln=36:so=32:pi=33:ex=31:bd=34;46:cd=34;43'
-
-# -----------------------------
-# fnm Setup
-# -----------------------------
-FNM_PATH="/home/godshall/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  export PATH="/home/godshall/.local/share/fnm:$PATH"
-  eval "`fnm env`"
+# fnm (Fast Node Manager) - Node.js version manager
+FNM_PATH="$HOME/.local/share/fnm"
+if [[ -d "$FNM_PATH" ]]; then
+  export PATH="$FNM_PATH:$PATH"
+  eval "$(fnm env --use-on-cd 2>/dev/null)" || eval "$(fnm env 2>/dev/null)"
 fi
 
+# pyenv - Python version manager
+export PYENV_ROOT="$HOME/.pyenv"
+if [[ -d "$PYENV_ROOT/bin" ]]; then
+  export PATH="$PYENV_ROOT/bin:$PATH"
+  if command -v pyenv >/dev/null 2>&1; then
+    eval "$(pyenv init - zsh)"
+    # If you use pyenv-virtualenv
+    # eval "$(pyenv virtualenv-init - zsh)"
+  fi
+fi
 
-# To customize prompt, run `p10k configure` or edit ~/dotfiles/p10k.zsh.
-[[ ! -f ~/dotfiles/p10k.zsh ]] || source ~/dotfiles/p10k.zsh
-# Install Ruby Gems to ~/gems
+# Ruby Gems
 export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
 
-# source /usr/share/doc/fzf/examples/key-bindings.zsh
-
-export PYENV_ROOT="$HOME/.pyenv"
-[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-if command -v pyenv >/dev/null; then
-  eval "$(pyenv init - zsh)"
-  # If you use pyenv-virtualenv  
-  # eval "$(pyenv virtualenv-init - zsh)"
+# Neovim (if installed to /opt)
+if [[ -d "/opt/nvim-linux-x86_64/bin" ]]; then
+  export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
 fi
-export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
-bindkey -v
+
+# -----------------------------
+# Aliases
+# -----------------------------
+alias history='fc -il 1'
+alias ls='ls --color=auto'
+alias ll='ls -lh'
+alias la='ls -lah'
+alias l='ls -lh'
+alias v='nvim'
+alias vi='nvim'
+alias vim='nvim'
+
+# Directory navigation
+alias ..='cd ..'
+alias ...='cd ../..'
+alias ....='cd ../../..'
+
+# Git shortcuts (if you use git)
+alias g='git'
+alias gs='git status'
+alias ga='git add'
+alias gc='git commit'
+alias gp='git push'
+alias gl='git pull'
+
+# System
+alias update="sudo apt-get update && sudo apt-get upgrade -y"
+alias df='df -h'
+alias du='du -h'
+
+# Colors
+export LS_COLORS='di=1;34:ln=36:so=32:pi=33:ex=31:bd=34;46:cd=34;43'
+
+# -----------------------------
+# Functions
+# -----------------------------
+# Docker functions (better than long aliases)
+docker-restart-hard() {
+  sudo docker system prune -f -a && \
+  sudo docker volume prune -f -a && \
+  sudo docker compose down && \
+  sudo docker system prune -f && \
+  sudo docker compose build && \
+  sudo docker compose up --watch
+}
+
+docker-restart() {
+  sudo docker compose down && \
+  sudo docker system prune -f && \
+  sudo docker compose up --build --watch && \
+  sleep 5 && \
+  curl localhost:3000
+}
+
+# Make directory and cd into it
+mkcd() {
+  mkdir -p "$1" && cd "$1"
+}
+
+# Extract various archive formats
+extract() {
+  if [ -f "$1" ]; then
+    case "$1" in
+      *.tar.bz2)   tar xjf "$1"     ;;
+      *.tar.gz)    tar xzf "$1"     ;;
+      *.bz2)       bunzip2 "$1"     ;;
+      *.rar)       unrar x "$1"     ;;
+      *.gz)        gunzip "$1"      ;;
+      *.tar)       tar xf "$1"      ;;
+      *.tbz2)      tar xjf "$1"     ;;
+      *.tgz)       tar xzf "$1"     ;;
+      *.zip)       unzip "$1"       ;;
+      *.Z)         uncompress "$1"  ;;
+      *.7z)        7z x "$1"        ;;
+      *)           echo "'$1' cannot be extracted via extract()" ;;
+    esac
+  else
+    echo "'$1' is not a valid file"
+  fi
+}
+
+# Project-specific formatting (if the path exists)
+formatting() {
+  local script_path="$HOME/MAPPy/dev/llm-engine/scripts/pass_lint.sh"
+  if [[ -f "$script_path" ]]; then
+    local original_dir=$(pwd)
+    cd "$(dirname "$script_path")" && "$script_path" && cd "$original_dir"
+  else
+    echo "Formatting script not found at $script_path"
+  fi
+}
+
+# -----------------------------
+# Additional Tools
+# -----------------------------
+# The Fuck - corrects previous command
+if command -v thefuck >/dev/null 2>&1; then
+  eval "$(thefuck --alias)"
+fi
+
+# Spell checking
 setopt CORRECT
-eval "$(thefuck --alias)"
+setopt CORRECT_ALL
 
-# fnm
-FNM_PATH="/home/godshall/.local/share/fnm"
-if [ -d "$FNM_PATH" ]; then
-  export PATH="$FNM_PATH:$PATH"
-  eval "`fnm env`"
-fi
