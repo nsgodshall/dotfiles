@@ -19,7 +19,7 @@ clean_welcome() {
 }
 
 autoload -Uz add-zsh-hook
-clean_welcome
+# clean_welcome
 
 # -----------------------------
 # Powerlevel10k Instant Prompt
@@ -41,7 +41,7 @@ setopt HIST_FIND_NO_DUPS
 setopt HIST_IGNORE_SPACE
 setopt HIST_SAVE_NO_DUPS
 setopt SHARE_HISTORY
-ZSH_AUTOSUGGEST_STRATEGY=(match_prev_cmd completion)
+ZSH_AUTOSUGGEST_STRATEGY=(match_prev_cmd )
 # -----------------------------
 # Shell Options
 # -----------------------------
@@ -123,11 +123,23 @@ fi
 export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
 
-source /usr/share/doc/fzf/examples/key-bindings.zsh
+# source /usr/share/doc/fzf/examples/key-bindings.zsh
 
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
-eval "$(pyenv init - bash)"
+if command -v pyenv >/dev/null; then
+  eval "$(pyenv init - zsh)"
+  # If you use pyenv-virtualenv  
+  # eval "$(pyenv virtualenv-init - zsh)"
+fi
 export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
 bindkey -v
 setopt CORRECT
+eval "$(thefuck --alias)"
+
+# fnm
+FNM_PATH="/home/godshall/.local/share/fnm"
+if [ -d "$FNM_PATH" ]; then
+  export PATH="$FNM_PATH:$PATH"
+  eval "`fnm env`"
+fi
