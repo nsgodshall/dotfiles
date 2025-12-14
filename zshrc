@@ -295,14 +295,15 @@ formatting() {
 # -----------------------------
 # Additional Tools
 # -----------------------------
-# The Fuck - corrects previous command
-if command -v thefuck >/dev/null 2>&1; then
-  eval "$(thefuck --alias)"
-fi
-
 # Spell checking
 setopt CORRECT
 setopt CORRECT_ALL
 
+<<<<<<< HEAD
 export EDITOR='nvim'
 export VISUAL='nvim'
+=======
+
+. "$HOME/.local/bin/env"
+source $HOME/.local/bin/env
+>>>>>>> d238e131978e7d6a977ada63ce0eb60d6f53cb8b
