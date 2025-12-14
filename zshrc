@@ -113,13 +113,29 @@ zle -N zle-line-init
 COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-$ZSH_VERSION"
 zstyle :compinstall filename "$HOME/.zshrc"
 
-# Only run compinit if cache is older than 24 hours or missing
-autoload -Uz compinit
-if [[ -n ${COMPDUMP}(#qN.mh+24) ]]; then
-  compinit -d "$COMPDUMP"
-else
-  compinit -C -d "$COMPDUMP"
-fi
+# Only run compinit if cache is older than 24 hours or missing.
+autoload -Uz compinit compaudit
+
+_fix_insecure_compdirs() {
+  local -a insecure
+  insecure=($(compaudit 2>/dev/null))
+  if (( ${#insecure[@]} )); then
+    for path in "${insecure[@]}"; do
+      chmod go-w "$path" 2>/dev/null || true
+    done
+  fi
+}
+
+_init_completion() {
+  _fix_insecure_compdirs
+  if [[ -n ${COMPDUMP}(#qN.mh+24) ]]; then
+    compinit -d "$COMPDUMP" || compinit -u -d "$COMPDUMP"
+  else
+    compinit -C -d "$COMPDUMP" || compinit -u -C -d "$COMPDUMP"
+  fi
+}
+
+_init_completion
 
 # -----------------------------
 # Zinit Plugin Manager
