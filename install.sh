@@ -82,7 +82,7 @@ install_system_packages() {
         return 0
     fi
 
-    local packages=(git zsh curl wget ripgrep unzip tar neovim)
+    local packages=(git zsh curl wget ripgrep unzip tar neovim fontconfig fzf)
 
     case "$manager" in
         apt)
@@ -380,6 +380,61 @@ install_fzf() {
     fi
 }
 
+# Install a Nerd Font (defaults to Mononoki as a Monokai-friendly face)
+install_nerd_font() {
+    local requested_font="${NERD_FONT_NAME:-Monokai}"
+    local font_name="$requested_font"
+    local request_lower="${requested_font,,}"
+
+    if [ "$request_lower" = "monokai" ]; then
+        font_name="Mononoki"
+        log_info "Monokai Nerd Font isn't distributed upstream; installing Mononoki Nerd Font instead."
+    fi
+
+    if ! command -v curl &> /dev/null || ! command -v unzip &> /dev/null; then
+        log_warning "curl or unzip missing; cannot install Nerd Font."
+        return 0
+    fi
+
+    local font_display="${font_name} Nerd Font"
+    if command -v fc-list &> /dev/null && fc-list | grep -qi "$font_display"; then
+        log_info "$font_display already installed."
+        return 0
+    fi
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    local encoded_font="${font_name// /%20}"
+    local download_url="https://github.com/ryanoasis/nerd-fonts/releases/latest/download/${encoded_font}.zip"
+    local archive="$tmp_dir/font.zip"
+    local fonts_dir="$HOME/.local/share/fonts"
+    local target_dir="$fonts_dir/${font_name// /_}-NerdFont"
+
+    log_info "Downloading $font_display..."
+    if ! curl -fsSL "$download_url" -o "$archive"; then
+        log_warning "Failed to download $font_display archive from $download_url"
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    rm -rf "$target_dir"
+    mkdir -p "$target_dir"
+    if ! unzip -oq "$archive" -d "$target_dir"; then
+        log_warning "Failed to extract $font_display. You may need to install it manually."
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+    rm -rf "$tmp_dir"
+
+    log_info "Fonts extracted to $target_dir"
+    if command -v fc-cache &> /dev/null; then
+        fc-cache -f "$fonts_dir" >/dev/null 2>&1 || true
+        log_success "$font_display installed and font cache refreshed."
+    else
+        log_warning "fc-cache not found; you may need to refresh font cache manually."
+    fi
+}
+
 # Ensure Kickstart (Neovim starter config) is installed
 ensure_kickstart_repo() {
     local config_dir="$1"
@@ -488,6 +543,7 @@ main() {
     # Install dependencies
     install_zinit
     install_fzf
+    install_nerd_font
 
     set_default_shell_to_zsh
 

@@ -9,6 +9,7 @@ Personal dotfiles configuration for zsh with Powerlevel10k, Zinit, and fzf.
 - **Zinit** plugin manager + **fzf** fuzzy finder
 - **tmux** configuration (optional)
 - **Neovim + Kickstart** configuration with lazy.nvim (latest Neovim release downloaded automatically on apt-based systems)
+- **Mononoki Nerd Font** (Monokai-friendly) automatically installed into `~/.local/share/fonts`
 
 ## Quick Start
 
@@ -50,7 +51,7 @@ The `install.sh` script is **idempotent** (safe to run multiple times) and will:
    - `p10k.zsh` → `~/.p10k.zsh`
    - `tmux.conf` → `~/.tmux.conf` (if present)
 6. **Install Kickstart for Neovim** - Clones the Kickstart repo into `~/.config/nvim` (backup existing config) and links this repo's `init.lua`
-7. **Install tooling** - Installs/updates Zinit and fzf
+7. **Install tooling** - Installs/updates Zinit and fzf, plus downloads Mononoki Nerd Font (override with `NERD_FONT_NAME`)
 8. **Set default shell** - Runs `chsh -s "$(which zsh)"` to make zsh the default login shell
 
 ## Improvements
@@ -84,6 +85,7 @@ After installation, you can customize:
 - **Theme config**: Edit `~/dotfiles/p10k.zsh`
 - **tmux config**: Edit `~/dotfiles/tmux.conf` (reload with `tmux source-file ~/.tmux.conf`)
 - **Neovim config**: Edit `~/dotfiles/init.lua` (changes take effect on next Neovim start)
+- **Font choice**: Set `NERD_FONT_NAME=<FontName>` before running `install.sh` to grab another Nerd Font (defaults to Mononoki as a Monokai-style face)
 
 ## Troubleshooting
 
