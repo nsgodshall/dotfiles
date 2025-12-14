@@ -7,28 +7,6 @@ if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]
 fi
 
 # -----------------------------
-# Welcome Message (Optional)
-# -----------------------------
-# Note: This function is defined but not called to prevent p10k warnings.
-clean_welcome() {
-  if [[ -z "$ZSH_WELCOME_SHOWN" ]]; then
-    local datetime=$(date '+%a, %b %d %Y — %I:%M %p')
-    local hostname=$(hostname -s)
-    local git_branch=$(git rev-parse --abbrev-ref HEAD 2>/dev/null)
-
-    echo ""
-    echo "User        :  $USER@$hostname"
-    echo "Directory   :  $(pwd)"
-    echo "Started     :  $datetime"
-    [[ -n "$git_branch" ]] && echo "Git Branch  :  $git_branch"
-    echo ""
-
-    export ZSH_WELCOME_SHOWN=1
-  fi
-}
-autoload -Uz add-zsh-hook
-
-# -----------------------------
 # History Settings
 # -----------------------------
 HISTDIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh"
@@ -71,7 +49,6 @@ export KEYTIMEOUT=1
 bindkey '^?' backward-delete-char
 bindkey '^h' backward-delete-char
 bindkey '^w' backward-kill-word
-bindkey '^r' history-incremental-search-backward
 
 # Cursor shape handling
 function zle-keymap-select {
@@ -129,9 +106,76 @@ zinit ice depth=1; zinit light zsh-users/zsh-autosuggestions
 zinit ice wait'0' lucid; zinit load zdharma-continuum/fast-syntax-highlighting
 zinit ice wait'0' lucid; zinit load rupa/z
 
-# FZF: Load silently
-zinit ice depth=1 atload='[[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh 2>/dev/null'
+# FZF integration: ensure binary is in PATH and hotkeys/completions are sourced exactly once
+zinit ice depth=1
 zinit light junegunn/fzf
+
+FZF_BASE="${FZF_BASE:-$HOME/.fzf}"
+if [[ -d "$FZF_BASE/bin" ]] && [[ ":$PATH:" != *":$FZF_BASE/bin:"* ]]; then
+  export PATH="$FZF_BASE/bin:$PATH"
+fi
+
+if [[ -o interactive ]]; then
+  _fzf_shell_dirs=()
+  if [[ -d "$FZF_BASE/shell" ]]; then
+    _fzf_shell_dirs+=("$FZF_BASE/shell")
+  fi
+  if typeset -p ZINIT &>/dev/null; then
+    _zinit_base="${ZINIT[HOME_DIR]}"
+  elif [[ -n ${ZINIT_HOME:-} ]]; then
+    _zinit_base="$ZINIT_HOME"
+  else
+    _zinit_base="$HOME/.local/share/zinit"
+  fi
+  if [[ -n "$_zinit_base" ]] && [[ -d "$_zinit_base/plugins/junegunn---fzf/shell" ]]; then
+    _fzf_shell_dirs+=("$_zinit_base/plugins/junegunn---fzf/shell")
+  fi
+
+  _fzf_key_bindings_loaded=0
+  _fzf_completion_loaded=0
+
+  for _fzf_dir in "${_fzf_shell_dirs[@]}"; do
+    if (( !_fzf_key_bindings_loaded )) && [[ -f "$_fzf_dir/key-bindings.zsh" ]]; then
+      source "$_fzf_dir/key-bindings.zsh"
+      _fzf_key_bindings_loaded=1
+    fi
+    if (( !_fzf_completion_loaded )) && [[ -f "$_fzf_dir/completion.zsh" ]]; then
+      source "$_fzf_dir/completion.zsh"
+      _fzf_completion_loaded=1
+    fi
+  done
+
+  if (( !_fzf_key_bindings_loaded )); then
+    if [[ -f "$HOME/.fzf.zsh" ]]; then
+      source "$HOME/.fzf.zsh" 2>/dev/null
+      _fzf_key_bindings_loaded=1
+      _fzf_completion_loaded=1
+    elif command -v fzf >/dev/null 2>&1; then
+      source <(fzf --zsh) 2>/dev/null
+      _fzf_key_bindings_loaded=1
+      _fzf_completion_loaded=1
+    fi
+  fi
+
+  unset _fzf_shell_dirs _fzf_dir _fzf_key_bindings_loaded _fzf_completion_loaded _zinit_base
+fi
+
+# Ensure vi-fetch-history widget exists so fzf Ctrl-R works on distros missing it
+if [[ -o interactive ]]; then
+  zmodload zsh/zle 2>/dev/null || true
+  if typeset -p widgets &>/dev/null && (( ! ${+widgets[vi-fetch-history]} )); then
+    vi-fetch-history() {
+      if (( NUMERIC <= 0 )); then
+        return 1
+      fi
+      local _fzf_hist_line
+      _fzf_hist_line=$(fc -ln "$NUMERIC" "$NUMERIC" 2>/dev/null) || return 1
+      BUFFER="$_fzf_hist_line"
+      CURSOR=${#BUFFER}
+    }
+    zle -N vi-fetch-history
+  fi
+fi
 
 # -----------------------------
 # Powerlevel10k Config
