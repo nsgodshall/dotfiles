@@ -315,11 +315,10 @@ formatting() {
 setopt CORRECT
 setopt CORRECT_ALL
 
-<<<<<<< HEAD
 export EDITOR='nvim'
 export VISUAL='nvim'
-=======
 
-. "$HOME/.local/bin/env"
-source $HOME/.local/bin/env
->>>>>>> d238e131978e7d6a977ada63ce0eb60d6f53cb8b
+if [[ -f "$HOME/.local/bin/env" ]]; then
+  # shellcheck disable=SC1090
+  source "$HOME/.local/bin/env"
+fi
