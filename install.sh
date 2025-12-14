@@ -82,15 +82,17 @@ install_system_packages() {
         return 0
     fi
 
-    local packages=(git zsh curl wget ripgrep unzip tar neovim fontconfig fzf)
+    local packages=(git zsh curl wget ripgrep unzip tar neovim fontconfig fzf gcc)
 
     case "$manager" in
         apt)
+            packages+=("libpcre2-8")
             log_info "Installing required packages via apt-get..."
             sudo apt-get update -y
             sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
             ;;
         pacman)
+            packages+=("pcre2")
             log_info "Installing required packages via pacman..."
             sudo pacman -Sy --needed --noconfirm "${packages[@]}"
             ;;
@@ -164,6 +166,12 @@ check_prerequisites() {
 
     local missing_required=()
     local missing_optional=()
+    local package_manager=""
+    if package_manager=$(detect_package_manager 2>/dev/null); then
+        :
+    else
+        package_manager=""
+    fi
 
     # Required dependencies (script will fail without these)
     if ! command -v git &> /dev/null; then
@@ -176,6 +184,25 @@ check_prerequisites() {
 
     if ! command -v nvim &> /dev/null; then
         missing_required+=("neovim")
+    fi
+    
+    if ! command -v gcc &> /dev/null; then
+        missing_required+=("gcc")
+    fi
+
+    if [ -n "$package_manager" ]; then
+        case "$package_manager" in
+            apt)
+                if ! dpkg -s libpcre2-8 >/dev/null 2>&1; then
+                    missing_required+=("libpcre2-8")
+                fi
+                ;;
+            pacman)
+                if ! pacman -Qi pcre2 >/dev/null 2>&1; then
+                    missing_required+=("pcre2")
+                fi
+                ;;
+        esac
     fi
     
     # Optional dependencies (script will warn but continue)
@@ -206,6 +233,16 @@ check_prerequisites() {
                 neovim)
                     echo "  - Debian/Ubuntu: sudo apt-get install neovim"
                     echo "  - Arch Linux: sudo pacman -S neovim"
+                    ;;
+                gcc)
+                    echo "  - Debian/Ubuntu: sudo apt-get install gcc"
+                    echo "  - Arch Linux: sudo pacman -S gcc"
+                    ;;
+                libpcre2-8)
+                    echo "  - Debian/Ubuntu: sudo apt-get install libpcre2-8"
+                    ;;
+                pcre2)
+                    echo "  - Arch Linux: sudo pacman -S pcre2"
                     ;;
             esac
         done
