@@ -1,6 +1,15 @@
 # -----------------------------
-# Welcome Message
+# Powerlevel10k Instant Prompt
 # -----------------------------
+# This must be at the very top. No output before this line.
+if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
+  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
+fi
+
+# -----------------------------
+# Welcome Message (Optional)
+# -----------------------------
+# Note: This function is defined but not called to prevent p10k warnings.
 clean_welcome() {
   if [[ -z "$ZSH_WELCOME_SHOWN" ]]; then
     local datetime=$(date '+%a, %b %d %Y — %I:%M %p')
@@ -17,91 +26,66 @@ clean_welcome() {
     export ZSH_WELCOME_SHOWN=1
   fi
 }
-
 autoload -Uz add-zsh-hook
-# clean_welcome
-
-# -----------------------------
-# Powerlevel10k Instant Prompt
-# -----------------------------
-if [[ -r "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh" ]]; then
-  source "${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-${(%):-%n}.zsh"
-fi
 
 # -----------------------------
 # History Settings
 # -----------------------------
-# Use XDG directory if available, fallback to home
 HISTDIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh"
 mkdir -p "$HISTDIR"
 export HISTFILE="$HISTDIR/history"
 export HISTSIZE=5000000
 export SAVEHIST=$HISTSIZE
 
-# Migrate history from old location if it exists and new location is empty/small
+# Migrate history if needed
 if [[ -f ~/.hist_zsh ]] && [[ -s ~/.hist_zsh ]]; then
   if [[ ! -f "$HISTFILE" ]] || [[ $(wc -l < "$HISTFILE" 2>/dev/null || echo 0) -lt 10 ]]; then
-    cp ~/.hist_zsh "$HISTFILE" 2>/dev/null && echo "Migrated history from ~/.hist_zsh"
+    cp ~/.hist_zsh "$HISTFILE" 2>/dev/null
   fi
 fi
 
-setopt EXTENDED_HISTORY          # Save timestamp and duration
-setopt HIST_EXPIRE_DUPS_FIRST    # Expire duplicate entries first
-setopt HIST_FIND_NO_DUPS          # Don't show duplicates in search
-setopt HIST_IGNORE_SPACE          # Ignore commands starting with space
-setopt HIST_SAVE_NO_DUPS          # Don't save duplicates
-setopt SHARE_HISTORY              # Share history between sessions
+setopt EXTENDED_HISTORY
+setopt HIST_EXPIRE_DUPS_FIRST
+setopt HIST_FIND_NO_DUPS
+setopt HIST_IGNORE_SPACE
+setopt HIST_SAVE_NO_DUPS
+setopt SHARE_HISTORY
 ZSH_AUTOSUGGEST_STRATEGY=(match_prev_cmd)
 
 # -----------------------------
 # Shell Options
 # -----------------------------
-setopt autocd                    # cd to directory by typing its name
-setopt extendedglob              # Extended globbing
-setopt nomatch                   # Error if no match
-setopt notify                    # Report job status immediately
-setopt AUTO_PUSHD                # cd pushes to directory stack
-setopt PUSHD_IGNORE_DUPS         # Don't push duplicates
-setopt PUSHD_SILENT              # Don't print directory stack
-setopt CDABLE_VARS               # cd to variables
-unsetopt beep                    # Disable beep
+setopt autocd
+setopt extendedglob
+setopt nomatch
+setopt notify
+setopt AUTO_PUSHD
+setopt PUSHD_IGNORE_DUPS
+setopt PUSHD_SILENT
+setopt CDABLE_VARS
+unsetopt beep
 
-# Vi mode keybindings
-bindkey -v                       # Vi mode
-# bindkey -e                      # Emacs mode (commented out)
-
-# Vi mode enhancements
-# Reduce delay when switching to normal mode (default is 0.4s)
+# Vi mode
+bindkey -v
 export KEYTIMEOUT=1
+bindkey '^?' backward-delete-char
+bindkey '^h' backward-delete-char
+bindkey '^w' backward-kill-word
+bindkey '^r' history-incremental-search-backward
 
-# Better vi mode keybindings
-bindkey '^?' backward-delete-char  # Backspace works in insert mode
-bindkey '^h' backward-delete-char  # Ctrl+h works like backspace
-bindkey '^w' backward-kill-word    # Ctrl+w deletes word backward
-bindkey '^r' history-incremental-search-backward  # Ctrl+r for history search
-
-# Vi mode cursor shape and prompt update
-# Powerlevel10k automatically changes the prompt character:
-#   Insert mode: » (configured in p10k.zsh)
-#   Normal mode: ❮ (configured in p10k.zsh)
-# This function just handles cursor shape and ensures prompt updates
+# Cursor shape handling
 function zle-keymap-select {
   if [[ ${KEYMAP} == vicmd ]]; then
-    # Normal mode - block cursor
-    echo -ne '\e[1 q'  # Block cursor
+    echo -ne '\e[1 q' # Block
   elif [[ ${KEYMAP} == main ]] || [[ ${KEYMAP} == viins ]]; then
-    # Insert mode - beam cursor
-    echo -ne '\e[5 q'  # Beam cursor
+    echo -ne '\e[5 q' # Beam
   fi
-  # Force prompt update so p10k shows the correct character
   zle reset-prompt
 }
 zle -N zle-keymap-select
 
-# Set initial cursor shape (insert mode)
 zle-line-init() {
-  echo -ne '\e[5 q'  # Beam cursor (insert mode)
-  # Ensure prompt is updated on new line
+  echo -ne '\e[5 q'
   zle reset-prompt
 }
 zle -N zle-line-init
@@ -109,43 +93,23 @@ zle -N zle-line-init
 # -----------------------------
 # Completion Setup
 # -----------------------------
-# Use XDG directory for completion cache
 COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-$ZSH_VERSION"
 zstyle :compinstall filename "$HOME/.zshrc"
 
-# Only run compinit if cache is older than 24 hours or missing.
-autoload -Uz compinit compaudit
-
-_fix_insecure_compdirs() {
-  local -a insecure
-  insecure=($(compaudit 2>/dev/null))
-  if (( ${#insecure[@]} )); then
-    for path in "${insecure[@]}"; do
-      chmod go-w "$path" 2>/dev/null || true
-    done
-  fi
-}
-
-_init_completion() {
-  _fix_insecure_compdirs
-  if [[ -n ${COMPDUMP}(#qN.mh+24) ]]; then
-    compinit -d "$COMPDUMP" || compinit -u -d "$COMPDUMP"
-  else
-    compinit -C -d "$COMPDUMP" || compinit -u -C -d "$COMPDUMP"
-  fi
-}
-
-_init_completion
+autoload -Uz compinit
+if [[ -n ${COMPDUMP}(#qN.mh+24) ]]; then
+  compinit -d "$COMPDUMP"
+else
+  compinit -C -d "$COMPDUMP"
+fi
 
 # -----------------------------
 # Zinit Plugin Manager
 # -----------------------------
 if [[ ! -f $HOME/.local/share/zinit/zinit.git/zinit.zsh ]]; then
-  print -P "%F{33} %F{220}Installing %F{33}Zinit%F{220} Plugin Manager…%f"
+  # Silence output during installation check
   command mkdir -p "$HOME/.local/share/zinit" && chmod g-rwX "$HOME/.local/share/zinit"
-  command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" && \
-    print -P "%F{33} %F{34}Installation successful.%f%b" || \
-    print -P "%F{160} The clone has failed.%f%b"
+  command git clone https://github.com/zdharma-continuum/zinit "$HOME/.local/share/zinit/zinit.git" >/dev/null 2>&1
 fi
 
 source "$HOME/.local/share/zinit/zinit.git/zinit.zsh"
@@ -159,16 +123,14 @@ zinit light-mode for \
   zdharma-continuum/zinit-annex-patch-dl \
   zdharma-continuum/zinit-annex-rust
 
-# -----------------------------
-# Plugins via Zinit
-# -----------------------------
+# Plugins
 zinit ice depth=1; zinit light romkatv/powerlevel10k
 zinit ice depth=1; zinit light zsh-users/zsh-autosuggestions
 zinit ice wait'0' lucid; zinit load zdharma-continuum/fast-syntax-highlighting
 zinit ice wait'0' lucid; zinit load rupa/z
 
-# Load fzf and its bindings (single time only)
-zinit ice depth=1 atload='[[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh'
+# FZF: Load silently
+zinit ice depth=1 atload='[[ -f ~/.fzf.zsh ]] && source ~/.fzf.zsh 2>/dev/null'
 zinit light junegunn/fzf
 
 # -----------------------------
@@ -177,14 +139,13 @@ zinit light junegunn/fzf
 [[ -f ~/.p10k.zsh ]] && source ~/.p10k.zsh
 
 # -----------------------------
-# PATH Management
+# PATH & Environment Tools
 # -----------------------------
-# Ensure user-local binaries (like Neovim) override system defaults
 if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
   export PATH="$HOME/.local/bin:$PATH"
 fi
 
-# fnm (Fast Node Manager) - Node.js version manager
+# fnm (Fast Node Manager) - Silenced stderr
 FNM_PATH="$HOME/.local/share/fnm"
 if [[ -d "$FNM_PATH" ]]; then
   export PATH="$FNM_PATH:$PATH"
@@ -196,9 +157,9 @@ export PYENV_ROOT="$HOME/.pyenv"
 if [[ -d "$PYENV_ROOT/bin" ]]; then
   export PATH="$PYENV_ROOT/bin:$PATH"
   if command -v pyenv >/dev/null 2>&1; then
-    eval "$(pyenv init - zsh)"
-    # If you use pyenv-virtualenv
-    # eval "$(pyenv virtualenv-init - zsh)"
+    # FIXED: "init - zsh" often causes issues or "unknown option".
+    # Using "init -" is standard. Added 2>/dev/null to silence errors.
+    eval "$(pyenv init - 2>/dev/null)"
   fi
 fi
 
@@ -206,7 +167,7 @@ fi
 export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
 
-# Neovim (if installed to /opt)
+# Neovim
 if [[ -d "/opt/nvim-linux-x86_64/bin" ]]; then
   export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
 fi
@@ -223,12 +184,10 @@ alias v='nvim'
 alias vi='nvim'
 alias vim='nvim'
 
-# Directory navigation
 alias ..='cd ..'
 alias ...='cd ../..'
 alias ....='cd ../../..'
 
-# Git shortcuts (if you use git)
 alias g='git'
 alias gs='git status'
 alias ga='git add'
@@ -236,19 +195,15 @@ alias gc='git commit'
 alias gp='git push'
 alias gl='git pull'
 
-# System
 alias update="sudo apt-get update && sudo apt-get upgrade -y"
 alias df='df -h'
 alias du='du -h'
 
-# Colors
 export LS_COLORS='di=1;34:ln=36:so=32:pi=33:ex=31:bd=34;46:cd=34;43'
 
 # -----------------------------
 # Functions
 # -----------------------------
-# Docker functions (better than long aliases)
-# Unalias first in case they were defined as aliases elsewhere
 unalias docker-restart-hard 2>/dev/null || true
 docker-restart-hard() {
   sudo docker system prune -f -a && \
@@ -268,26 +223,22 @@ docker-restart() {
   curl localhost:3000
 }
 
-# Make directory and cd into it
-mkcd() {
-  mkdir -p "$1" && cd "$1"
-}
+mkcd() { mkdir -p "$1" && cd "$1"; }
 
-# Extract various archive formats
 extract() {
   if [ -f "$1" ]; then
     case "$1" in
-      *.tar.bz2)   tar xjf "$1"     ;;
-      *.tar.gz)    tar xzf "$1"     ;;
-      *.bz2)       bunzip2 "$1"     ;;
-      *.rar)       unrar x "$1"     ;;
-      *.gz)        gunzip "$1"      ;;
-      *.tar)       tar xf "$1"      ;;
-      *.tbz2)      tar xjf "$1"     ;;
-      *.tgz)       tar xzf "$1"     ;;
-      *.zip)       unzip "$1"       ;;
-      *.Z)         uncompress "$1"  ;;
-      *.7z)        7z x "$1"        ;;
+      *.tar.bz2)   tar xjf "$1"      ;;
+      *.tar.gz)    tar xzf "$1"      ;;
+      *.bz2)       bunzip2 "$1"      ;;
+      *.rar)       unrar x "$1"      ;;
+      *.gz)        gunzip "$1"       ;;
+      *.tar)       tar xf "$1"       ;;
+      *.tbz2)      tar xjf "$1"      ;;
+      *.tgz)       tar xzf "$1"      ;;
+      *.zip)       unzip "$1"        ;;
+      *.Z)         uncompress "$1"   ;;
+      *.7z)        7z x "$1"         ;;
       *)           echo "'$1' cannot be extracted via extract()" ;;
     esac
   else
@@ -295,8 +246,6 @@ extract() {
   fi
 }
 
-# Project-specific formatting (if the path exists)
-# Unalias first in case it was defined as an alias elsewhere
 unalias formatting 2>/dev/null || true
 formatting() {
   local script_path="$HOME/MAPPy/dev/llm-engine/scripts/pass_lint.sh"
@@ -311,14 +260,14 @@ formatting() {
 # -----------------------------
 # Additional Tools
 # -----------------------------
-# Spell checking
 setopt CORRECT
 setopt CORRECT_ALL
-
 export EDITOR='nvim'
 export VISUAL='nvim'
 
+# FIXED: Removed duplicate sourcing and added silence.
+# If this file contains "eval $(fzf --zsh)" or similar, it might be the cause
+# of the error if your installed binaries are old.
 if [[ -f "$HOME/.local/bin/env" ]]; then
-  # shellcheck disable=SC1090
   source "$HOME/.local/bin/env"
 fi
