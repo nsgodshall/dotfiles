@@ -4,19 +4,18 @@ Personal dotfiles configuration for zsh with Powerlevel10k, Zinit, and fzf.
 
 ## Features
 
-- **Zsh** configuration with Powerlevel10k theme
-- **Zinit** plugin manager for fast zsh plugin loading
-- **fzf** fuzzy finder integration
-- **Powerlevel10k** prompt customization
-- **tmux** terminal multiplexer configuration
-- **Neovim** editor configuration (init.lua)
+- **Bootstrapper** installs required packages on Debian/Ubuntu (apt) and Arch (pacman)
+- **Zsh** configuration with Powerlevel10k theme and zsh set as the default shell
+- **Zinit** plugin manager + **fzf** fuzzy finder
+- **tmux** configuration (optional)
+- **Neovim + Kickstart** configuration with lazy.nvim (latest Neovim release downloaded automatically on apt-based systems)
 
 ## Quick Start
 
 ### Prerequisites
 
-- `git` - for cloning repositories
-- `zsh` - the shell this configuration is for
+- Ability to run `sudo` for package installation
+- Debian/Ubuntu or Arch-based distro with either `apt` or `pacman`
 
 ### Installation
 
@@ -42,21 +41,25 @@ Personal dotfiles configuration for zsh with Powerlevel10k, Zinit, and fzf.
 
 The `install.sh` script is **idempotent** (safe to run multiple times) and will:
 
-1. **Check prerequisites** - Verifies that `git` and `zsh` are installed
-2. **Backup existing files** - Creates timestamped backups of any existing dotfiles
-3. **Create symlinks** - Links configuration files to their proper locations:
+1. **Install system packages** - Uses apt or pacman to install git, zsh, ripgrep, curl, etc.
+2. **Download latest Neovim (apt systems)** - Fetches the newest GitHub release to `~/.local/neovim` and symlinks it in `~/.local/bin`
+3. **Check prerequisites** - Verifies required tooling is now available
+4. **Backup existing files** - Creates timestamped backups before overwriting dotfiles
+5. **Create symlinks** - Links configuration files to their proper locations:
    - `zshrc` → `~/.zshrc`
    - `p10k.zsh` → `~/.p10k.zsh`
    - `tmux.conf` → `~/.tmux.conf` (if present)
-   - `init.lua` → `~/.config/nvim/init.lua` (if present)
-4. **Install Zinit** - Clones and sets up the Zinit plugin manager
-5. **Install fzf** - Clones and installs fzf with key bindings and completion
+6. **Install Kickstart for Neovim** - Clones the Kickstart repo into `~/.config/nvim` (backup existing config) and links this repo's `init.lua`
+7. **Install tooling** - Installs/updates Zinit and fzf
+8. **Set default shell** - Runs `chsh -s "$(which zsh)"` to make zsh the default login shell
 
 ## Improvements
 
 The bootstrap script includes several reliability improvements:
 
 - ✅ **Error handling** - Exits on errors with clear messages
+- ✅ **Package installation** - Installs dependencies on Debian/Ubuntu or Arch automatically
+- ✅ **Latest Neovim** - Downloads the newest official release on apt-based systems
 - ✅ **Prerequisite checks** - Verifies required tools are installed
 - ✅ **Backup mechanism** - Backs up existing files before overwriting
 - ✅ **Idempotency** - Can be run multiple times safely
@@ -104,4 +107,3 @@ If symlinks fail, check:
 ## License
 
 Personal configuration - use as you wish.
-

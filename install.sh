@@ -49,20 +49,133 @@ fi
 
 log_info "Detected dotfiles directory: $DOTFILES_DIR"
 
+# Ensure ~/.local/bin is evaluated before running checks so locally installed tools are detected
+export PATH="$HOME/.local/bin:$PATH"
+
+# Detect the package manager (supports Debian/Ubuntu via apt and Arch via pacman)
+detect_package_manager() {
+    if command -v apt-get &> /dev/null; then
+        echo "apt"
+        return 0
+    fi
+
+    if command -v pacman &> /dev/null; then
+        echo "pacman"
+        return 0
+    fi
+
+    return 1
+}
+
+# Install base system packages using the detected package manager
+install_system_packages() {
+    local manager
+    if ! manager=$(detect_package_manager); then
+        log_warning "Could not detect a supported package manager (apt or pacman)."
+        log_warning "Please install git, zsh, and neovim manually before proceeding."
+        return 0
+    fi
+
+    if ! command -v sudo &> /dev/null; then
+        log_warning "sudo is not available; skipping automatic package installation."
+        log_warning "Ensure git, zsh, and neovim are installed before continuing."
+        return 0
+    fi
+
+    local packages=(git zsh curl wget ripgrep unzip tar neovim)
+
+    case "$manager" in
+        apt)
+            log_info "Installing required packages via apt-get..."
+            sudo apt-get update -y
+            sudo DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends "${packages[@]}"
+            ;;
+        pacman)
+            log_info "Installing required packages via pacman..."
+            sudo pacman -Sy --needed --noconfirm "${packages[@]}"
+            ;;
+    esac
+
+    log_success "Base packages installed"
+}
+
+# Install the latest Neovim release from GitHub for Linux x86_64 systems.
+install_latest_neovim_release() {
+    local os_name
+    os_name=$(uname -s)
+    local arch
+    arch=$(uname -m)
+
+    if [ "$os_name" != "Linux" ]; then
+        log_warning "Automatic Neovim release install is only supported on Linux. Skipping custom install."
+        return 0
+    fi
+
+    case "$arch" in
+        x86_64|amd64)
+            :
+            ;;
+        *)
+            log_warning "Automatic Neovim install currently supports only x86_64/amd64. Skipping custom install."
+            return 0
+            ;;
+    esac
+
+    if ! command -v curl &> /dev/null || ! command -v tar &> /dev/null; then
+        log_warning "curl or tar missing; cannot install latest Neovim release."
+        return 0
+    fi
+
+    local tmp_dir
+    tmp_dir=$(mktemp -d)
+    local download_url="https://github.com/neovim/neovim/releases/latest/download/nvim-linux64.tar.gz"
+    local archive="$tmp_dir/nvim.tar.gz"
+    local install_dir="$HOME/.local/neovim"
+    local bin_dir="$HOME/.local/bin"
+
+    log_info "Downloading latest Neovim release..."
+    if ! curl -fsSL "$download_url" -o "$archive"; then
+        log_warning "Failed to download Neovim release archive."
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    log_info "Extracting Neovim to $install_dir..."
+    if ! tar -xzf "$archive" -C "$tmp_dir"; then
+        log_warning "Failed to extract Neovim archive."
+        rm -rf "$tmp_dir"
+        return 0
+    fi
+
+    backup_existing_path "$install_dir"
+    mkdir -p "$HOME/.local"
+    mv "$tmp_dir/nvim-linux64" "$install_dir"
+
+    mkdir -p "$bin_dir"
+    ln -sf "$install_dir/bin/nvim" "$bin_dir/nvim"
+
+    rm -rf "$tmp_dir"
+    log_success "Latest Neovim installed to $install_dir (symlinked at $bin_dir/nvim)"
+}
+
 # Check prerequisites
 check_prerequisites() {
     log_info "Checking prerequisites..."
-    
+
     local missing_required=()
     local missing_optional=()
-    
+
     # Required dependencies (script will fail without these)
     if ! command -v git &> /dev/null; then
         missing_required+=("git")
     fi
-    
+
     if ! command -v zsh &> /dev/null; then
         missing_required+=("zsh")
+    fi
+
+    if ! command -v nvim &> /dev/null; then
+        missing_required+=("neovim")
     fi
     
     # Optional dependencies (script will warn but continue)
@@ -84,9 +197,15 @@ check_prerequisites() {
             case "$dep" in
                 git)
                     echo "  - Debian/Ubuntu: sudo apt-get install git"
+                    echo "  - Arch Linux: sudo pacman -S git"
                     ;;
                 zsh)
                     echo "  - Debian/Ubuntu: sudo apt-get install zsh"
+                    echo "  - Arch Linux: sudo pacman -S zsh"
+                    ;;
+                neovim)
+                    echo "  - Debian/Ubuntu: sudo apt-get install neovim"
+                    echo "  - Arch Linux: sudo pacman -S neovim"
                     ;;
             esac
         done
@@ -103,16 +222,29 @@ check_prerequisites() {
             case "$dep" in
                 tmux)
                     echo "  - Debian/Ubuntu: sudo apt-get install tmux"
+                    echo "  - Arch Linux: sudo pacman -S tmux"
                     ;;
                 "nvim (or vim)")
                     echo "  - Debian/Ubuntu: sudo apt-get install neovim"
+                    echo "  - Arch Linux: sudo pacman -S neovim"
                     ;;
             esac
         done
         echo ""
     fi
-    
+
     log_success "All required prerequisites met"
+}
+
+# Backup a path (file, dir, or symlink) before replacing it
+backup_existing_path() {
+    local target="$1"
+
+    if [ -L "$target" ] || [ -e "$target" ]; then
+        local backup="${target}.backup.$(date +%Y%m%d_%H%M%S)"
+        log_warning "Backing up existing path $target to $backup"
+        mv "$target" "$backup"
+    fi
 }
 
 # Backup existing file if it exists and is not a symlink to our dotfiles
@@ -248,13 +380,100 @@ install_fzf() {
     fi
 }
 
+# Ensure Kickstart (Neovim starter config) is installed
+ensure_kickstart_repo() {
+    local config_dir="$1"
+    local kickstart_repo="${KICKSTART_REPO:-https://github.com/nvim-lua/kickstart.nvim.git}"
+
+    if [ -d "$config_dir/lua/kickstart" ]; then
+        if [ -d "$config_dir/.git" ]; then
+            log_info "Kickstart repository detected, checking for updates..."
+            if (cd "$config_dir" && git pull --ff-only --quiet); then
+                log_success "Kickstart updated"
+            else
+                log_warning "Could not update Kickstart repository (perhaps local changes exist)"
+            fi
+        else
+            log_info "Kickstart directory already present at $config_dir"
+        fi
+        return 0
+    fi
+
+    log_info "Installing Kickstart Neovim configuration..."
+    backup_existing_path "$config_dir"
+
+    mkdir -p "$(dirname "$config_dir")"
+    if git clone --depth 1 "$kickstart_repo" "$config_dir"; then
+        log_success "Kickstart installed at $config_dir"
+    else
+        log_error "Failed to clone Kickstart into $config_dir"
+        return 1
+    fi
+}
+
+# Set Zsh as the default shell for the current user
+set_default_shell_to_zsh() {
+    if ! command -v zsh &> /dev/null; then
+        log_warning "zsh is not installed; cannot set it as the default shell."
+        return
+    fi
+
+    local zsh_path
+    zsh_path=$(command -v zsh)
+
+    local current_shell
+    if command -v getent &> /dev/null; then
+        current_shell=$(getent passwd "$USER" | cut -d: -f7)
+    else
+        current_shell="${SHELL:-}"
+    fi
+
+    if [ "$current_shell" = "$zsh_path" ]; then
+        log_info "zsh is already the default shell."
+        return
+    fi
+
+    log_info "Setting default shell to zsh..."
+    if chsh -s "$zsh_path" "$USER"; then
+        log_success "Default shell changed to zsh. Please log out and back in for changes to take effect."
+    else
+        log_warning "Failed to change default shell automatically. Run 'chsh -s $zsh_path' manually."
+    fi
+}
+
+# Configure Neovim with Kickstart if needed
+setup_neovim_config() {
+    if [ -d "$DOTFILES_DIR/nvim" ]; then
+        link_dotfile "$DOTFILES_DIR/nvim" "$HOME/.config/nvim" "nvim (entire dir)"
+        return
+    fi
+
+    if [ ! -f "$DOTFILES_DIR/init.lua" ]; then
+        log_warning "No Neovim configuration found in dotfiles (init.lua missing). Skipping."
+        return
+    fi
+
+    ensure_kickstart_repo "$HOME/.config/nvim"
+
+    link_dotfile "$DOTFILES_DIR/init.lua" "$HOME/.config/nvim/init.lua" "nvim/init.lua"
+}
+
 # Main installation function
 main() {
     log_info "Starting dotfiles bootstrap..."
     log_info "Home directory: $HOME"
-    
+
+    install_system_packages
+
+    local package_manager=""
+    if package_manager=$(detect_package_manager); then
+        if [ "$package_manager" = "apt" ]; then
+            install_latest_neovim_release
+        fi
+    fi
+
     check_prerequisites
-    
+
     # Link dotfiles
     link_dotfile "$DOTFILES_DIR/zshrc" "$HOME/.zshrc" "zshrc"
     link_dotfile "$DOTFILES_DIR/p10k.zsh" "$HOME/.p10k.zsh" "p10k.zsh"
@@ -264,18 +483,14 @@ main() {
         link_dotfile "$DOTFILES_DIR/tmux.conf" "$HOME/.tmux.conf" "tmux.conf"
     fi
     
-    if [ -d "$DOTFILES_DIR/nvim" ]; then
-      link_dotfile "$DOTFILES_DIR/nvim" "$HOME/.config/nvim" "nvim (entire dir)"
-    elif [ -f "$DOTFILES_DIR/init.lua" ]; then
-      # Fallback: just init.lua (not recommended for Kickstart layouts)
-      mkdir -p "$HOME/.config/nvim"
-      link_dotfile "$DOTFILES_DIR/init.lua" "$HOME/.config/nvim/init.lua" "nvim/init.lua"
-    fi
-    
+    setup_neovim_config
+
     # Install dependencies
     install_zinit
     install_fzf
-    
+
+    set_default_shell_to_zsh
+
     log_success "Bootstrap completed successfully!"
     echo ""
     log_info "To activate your new configuration, run:"

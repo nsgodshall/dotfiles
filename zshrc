@@ -163,6 +163,11 @@ zinit light junegunn/fzf
 # -----------------------------
 # PATH Management
 # -----------------------------
+# Ensure user-local binaries (like Neovim) override system defaults
+if [[ ":$PATH:" != *":$HOME/.local/bin:"* ]]; then
+  export PATH="$HOME/.local/bin:$PATH"
+fi
+
 # fnm (Fast Node Manager) - Node.js version manager
 FNM_PATH="$HOME/.local/share/fnm"
 if [[ -d "$FNM_PATH" ]]; then
@@ -299,3 +304,5 @@ fi
 setopt CORRECT
 setopt CORRECT_ALL
 
+export EDITOR='nvim'
+export VISUAL='nvim'
