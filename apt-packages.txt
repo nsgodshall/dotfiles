@@ -1,0 +1,47 @@
+# Optional extras, installed with ./install-packages.sh
+#
+# install.sh already handles the essentials (git, zsh, tmux, neovim, ripgrep,
+# fzf, curl, wget, gcc, flatpak, ...). This file is the "nice to have" layer.
+# One package per line; # starts a comment.
+
+# --- toolchain -------------------------------------------------------------
+# gcc alone is not enough to build treesitter parsers or native Lua/npm deps.
+build-essential
+pkg-config
+
+# --- clipboard -------------------------------------------------------------
+# Without one of these, nvim's "+y and tmux copy-paste silently do nothing.
+# xclip covers X11, wl-clipboard covers Wayland. Harmless to have both.
+xclip
+wl-clipboard
+
+# --- LSP / formatter runtimes ---------------------------------------------
+# Mason installs a lot of node-based language servers; they need these.
+nodejs
+npm
+python3-venv
+
+# --- git -------------------------------------------------------------------
+git-delta
+gh
+
+# --- everyday CLI ----------------------------------------------------------
+eza
+jq
+tree
+htop
+btop
+less
+man-db
+tldr
+
+# --- archives --------------------------------------------------------------
+zip
+unzip
+p7zip-full
+
+# --- network ---------------------------------------------------------------
+dnsutils
+openssh-client
+gnupg
+ca-certificates

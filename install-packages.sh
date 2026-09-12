@@ -32,8 +32,18 @@ log_error() {
 DOTFILES_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 PACKAGES_FILE="${1:-$DOTFILES_DIR/apt-packages.txt}"
 
+if ! command -v apt-get >/dev/null 2>&1; then
+    log_error "This script is apt-only and this system has no apt-get."
+    log_error "On macOS use Homebrew; on Arch use pacman."
+    exit 1
+fi
+
 if [ ! -f "$PACKAGES_FILE" ]; then
     log_error "Packages file not found: $PACKAGES_FILE"
+    log_info "This script is optional and needs a package list to read."
+    log_info "It reads one apt package per line; # starts a comment."
+    log_info "Create it:        \$EDITOR $PACKAGES_FILE"
+    log_info "Or use your own:  $0 /path/to/list.txt"
     exit 1
 fi
 
@@ -51,10 +61,12 @@ log_info "Packages to install:"
 echo "$PACKAGES" | tr ' ' '\n' | grep -v '^$' | sed 's/^/  - /'
 
 echo ""
-read -p "Do you want to proceed with installation? (y/N) " -n 1 -r
+# `|| true`: read returns non-zero at EOF (piped or non-interactive input),
+# which under set -e would abort here instead of cancelling cleanly.
+read -p "Do you want to proceed with installation? (y/N) " -n 1 -r || true
 echo ""
 
-if [[ ! $REPLY =~ ^[Yy]$ ]]; then
+if [[ ! ${REPLY:-} =~ ^[Yy]$ ]]; then
     log_info "Installation cancelled"
     exit 0
 fi
@@ -71,14 +83,11 @@ log_success "Package installation completed!"
 # Post-installation notes
 echo ""
 log_info "Post-installation notes:"
-log_info "- If you installed docker.io, add your user to docker group:"
-echo "  sudo usermod -aG docker \$USER"
+log_info "- flatpak has no remotes until you add one:"
+echo "    flatpak remote-add --if-not-exists flathub https://flathub.org/repo/flathub.flatpakrepo"
 echo ""
-log_info "- Some tools have different command names:"
-echo "  - fd-find → use 'fd'"
-echo "  - ripgrep → use 'rg'"
+log_info "- gh needs a login before it can do anything useful:"
+echo "    gh auth login"
 echo ""
-log_info "- Consider installing these via other methods for latest versions:"
-echo "  - thefuck: pip install thefuck"
-echo "  - bat, exa, delta, lazygit: Check GitHub releases"
-
+log_info "- If you installed docker.io, add yourself to the docker group:"
+echo "    sudo usermod -aG docker \$USER"
