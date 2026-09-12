@@ -28,7 +28,9 @@ fi
 HISTDIR="${XDG_DATA_HOME:-$HOME/.local/share}/zsh"
 mkdir -p "$HISTDIR"
 export HISTFILE="$HISTDIR/history"
-export HISTSIZE=5000000
+# Zsh loads the whole history into memory at startup and SHARE_HISTORY re-reads
+# it on every command, so a huge value costs real startup time for no benefit.
+export HISTSIZE=100000
 export SAVEHIST=$HISTSIZE
 
 # Migrate history if needed
@@ -41,7 +43,8 @@ fi
 setopt EXTENDED_HISTORY
 setopt HIST_EXPIRE_DUPS_FIRST
 setopt HIST_FIND_NO_DUPS
-setopt HIST_IGNORE_SPACE
+setopt HIST_IGNORE_SPACE     # a leading space keeps a command out of history
+setopt HIST_REDUCE_BLANKS    # tidy up whitespace before storing
 setopt HIST_SAVE_NO_DUPS
 setopt SHARE_HISTORY
 ZSH_AUTOSUGGEST_STRATEGY=(match_prev_cmd)
@@ -84,6 +87,13 @@ zle-line-init() {
 zle -N zle-line-init
 
 # -----------------------------
+# Colors
+# -----------------------------
+# Drives GNU ls and, via the list-colors zstyle below, zsh's completion menu.
+# Harmless on macOS: BSD ls ignores it and uses -G instead.
+export LS_COLORS='di=1;34:ln=36:so=32:pi=33:ex=31:bd=34;46:cd=34;43'
+
+# -----------------------------
 # Completion Setup
 # -----------------------------
 COMPDUMP="${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-$ZSH_VERSION"
@@ -95,6 +105,26 @@ if [[ -n ${COMPDUMP}(#qN.mh+24) ]]; then
 else
   compinit -C -d "$COMPDUMP"
 fi
+
+# Completion behaviour. Without these, completion is stock zsh: case-sensitive,
+# no menu, no colors.
+#   1. lowercase matches uppercase (cd doc -> Documents)
+#   2. match after . _ - separators  (f.b -> foo.bar)
+#   3. substring match anywhere      (bar -> foobar)
+zstyle ':completion:*' matcher-list 'm:{a-zA-Z}={A-Za-z}' 'r:|[._-]=* r:|=*' 'l:|=* r:|=*'
+zstyle ':completion:*' list-colors "${(s.:.)LS_COLORS}"
+# fzf-tab needs the built-in menu off so it can capture the candidate list.
+zstyle ':completion:*' menu no
+# Group candidates by kind; fzf-tab renders the description as a group header.
+zstyle ':completion:*' group-name ''
+zstyle ':completion:*:descriptions' format '[%d]'
+# Keep option lists in documented order instead of sorting them alphabetically.
+zstyle ':completion:complete:*:options' sort false
+# Cache the slow completions (apt, docker, systemctl).
+zstyle ':completion:*' use-cache on
+zstyle ':completion:*' cache-path "${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompcache"
+# fzf-tab: cycle between groups with < and >
+zstyle ':fzf-tab:*' switch-group '<' '>'
 
 # -----------------------------
 # Zinit Plugin Manager
@@ -118,63 +148,25 @@ zinit light-mode for \
 
 # Plugins
 zinit ice depth=1; zinit light romkatv/powerlevel10k
+
+# FZF: the binary comes from the system package or this plugin; the shell
+# integration (Ctrl-R history, Ctrl-T files, Alt-C cd) comes from `fzf --zsh`,
+# which replaces the old hunt through ~/.fzf and the plugin's shell/ directory.
+zinit ice depth=1
+zinit light junegunn/fzf
+if [[ -o interactive ]] && (( $+commands[fzf] )); then
+  source <(fzf --zsh) 2>/dev/null
+fi
+
+# fzf-tab routes *all* tab completion through fzf. Load order is fussy: it must
+# come after compinit, after `fzf --zsh` (whose completion.zsh also binds Tab
+# and would otherwise win), and before anything that wraps ZLE widgets such as
+# zsh-autosuggestions or fast-syntax-highlighting.
+zinit ice depth=1; zinit light Aloxaf/fzf-tab
+
 zinit ice depth=1; zinit light zsh-users/zsh-autosuggestions
 zinit ice wait'0' lucid; zinit load zdharma-continuum/fast-syntax-highlighting
 zinit ice wait'0' lucid; zinit load rupa/z
-
-# FZF integration: ensure binary is in PATH and hotkeys/completions are sourced exactly once
-zinit ice depth=1
-zinit light junegunn/fzf
-
-FZF_BASE="${FZF_BASE:-$HOME/.fzf}"
-if [[ -d "$FZF_BASE/bin" ]] && [[ ":$PATH:" != *":$FZF_BASE/bin:"* ]]; then
-  export PATH="$FZF_BASE/bin:$PATH"
-fi
-
-if [[ -o interactive ]]; then
-  _fzf_shell_dirs=()
-  if [[ -d "$FZF_BASE/shell" ]]; then
-    _fzf_shell_dirs+=("$FZF_BASE/shell")
-  fi
-  if typeset -p ZINIT &>/dev/null; then
-    _zinit_base="${ZINIT[HOME_DIR]}"
-  elif [[ -n ${ZINIT_HOME:-} ]]; then
-    _zinit_base="$ZINIT_HOME"
-  else
-    _zinit_base="$HOME/.local/share/zinit"
-  fi
-  if [[ -n "$_zinit_base" ]] && [[ -d "$_zinit_base/plugins/junegunn---fzf/shell" ]]; then
-    _fzf_shell_dirs+=("$_zinit_base/plugins/junegunn---fzf/shell")
-  fi
-
-  _fzf_key_bindings_loaded=0
-  _fzf_completion_loaded=0
-
-  for _fzf_dir in "${_fzf_shell_dirs[@]}"; do
-    if (( !_fzf_key_bindings_loaded )) && [[ -f "$_fzf_dir/key-bindings.zsh" ]]; then
-      source "$_fzf_dir/key-bindings.zsh"
-      _fzf_key_bindings_loaded=1
-    fi
-    if (( !_fzf_completion_loaded )) && [[ -f "$_fzf_dir/completion.zsh" ]]; then
-      source "$_fzf_dir/completion.zsh"
-      _fzf_completion_loaded=1
-    fi
-  done
-
-  if (( !_fzf_key_bindings_loaded )); then
-    if [[ -f "$HOME/.fzf.zsh" ]]; then
-      source "$HOME/.fzf.zsh" 2>/dev/null
-      _fzf_key_bindings_loaded=1
-      _fzf_completion_loaded=1
-    elif command -v fzf >/dev/null 2>&1; then
-      source <(fzf --zsh) 2>/dev/null
-      _fzf_key_bindings_loaded=1
-      _fzf_completion_loaded=1
-    fi
-  fi
-
-  unset _fzf_shell_dirs _fzf_dir _fzf_key_bindings_loaded _fzf_completion_loaded _zinit_base
-fi
 
 # Ensure vi-fetch-history widget exists so fzf Ctrl-R works on distros missing it
 if [[ -o interactive ]]; then
@@ -227,16 +219,15 @@ fi
 export GEM_HOME="$HOME/gems"
 export PATH="$HOME/gems/bin:$PATH"
 
-# Neovim
-if [[ -d "/opt/nvim-linux-x86_64/bin" ]]; then
-  export PATH="$PATH:/opt/nvim-linux-x86_64/bin"
-fi
-
 # -----------------------------
 # Aliases
 # -----------------------------
 alias history='fc -il 1'
-alias ls='ls --color=auto'
+if [[ "$OSTYPE" == darwin* ]]; then
+  alias ls='ls -G'            # BSD ls has no --color
+else
+  alias ls='ls --color=auto'
+fi
 alias ll='ls -lh'
 alias la='ls -lah'
 alias l='ls -lh'
@@ -255,11 +246,13 @@ alias gc='git commit'
 alias gp='git push'
 alias gl='git pull'
 
-alias update="sudo apt-get update && sudo apt-get upgrade -y"
+if [[ "$OSTYPE" == darwin* ]]; then
+  alias update='brew update && brew upgrade'
+else
+  alias update='sudo apt-get update && sudo apt-get upgrade -y'
+fi
 alias df='df -h'
 alias du='du -h'
-
-export LS_COLORS='di=1;34:ln=36:so=32:pi=33:ex=31:bd=34;46:cd=34;43'
 
 # -----------------------------
 # Functions
@@ -306,22 +299,9 @@ extract() {
   fi
 }
 
-unalias formatting 2>/dev/null || true
-formatting() {
-  local script_path="$HOME/MAPPy/dev/llm-engine/scripts/pass_lint.sh"
-  if [[ -f "$script_path" ]]; then
-    local original_dir=$(pwd)
-    cd "$(dirname "$script_path")" && "$script_path" && cd "$original_dir"
-  else
-    echo "Formatting script not found at $script_path"
-  fi
-}
-
 # -----------------------------
 # Additional Tools
 # -----------------------------
-setopt CORRECT
-setopt CORRECT_ALL
 export EDITOR='nvim'
 export VISUAL='nvim'
 

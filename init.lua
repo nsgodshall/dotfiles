@@ -642,7 +642,6 @@ require('lazy').setup({
 
   { -- Autoformat
     'stevearc/conform.nvim',
-    event = { 'BufWritePre' },
     cmd = { 'ConformInfo' },
     keys = {
       {
@@ -655,51 +654,15 @@ require('lazy').setup({
       },
     },
     opts = {
-      notify_on_error = false,
-      format_on_save = function(bufnr)
-        -- Disable "format_on_save lsp_fallback" for languages that don't
-        -- have a well standardized coding style. You can add additional
-        -- languages here or re-enable it for the disabled ones.
-        local disable_filetypes = { c = true, cpp = true }
-        if disable_filetypes[vim.bo[bufnr].filetype] then
-          return nil
-        else
-          return {
-            timeout_ms = 2000,
-            lsp_format = 'fallback',
-          }
-        end
-      end,
+      notify_on_error = true,
+      -- No format_on_save on purpose: which formatter a project wants, and
+      -- whether it should run at all, is a per-project decision rather than
+      -- something this config should impose. Format explicitly with <leader>f.
       formatters_by_ft = {
         lua = { 'stylua' },
-        -- Conform can also run multiple formatters sequentially
-        python = { 'isort_custom', 'black_custom', 'autoflake_custom' },
-        --
-        -- You can use 'stop_after_first' to run the first available formatter from the list
+        -- 'stop_after_first' runs whichever of these is actually installed.
         javascript = { 'prettierd', 'prettier', stop_after_first = true },
         typescript = { 'prettierd', 'prettier', stop_after_first = true },
-      },
-      formatters = {
-        isort_custom = {
-          command = 'isort',
-          args = { '--line-length', '88', '--profile', 'black', '-' },
-          stdin = true,
-        },
-        black_custom = {
-          command = 'black',
-          args = { '--line-length', '88', '-' },
-          stdin = true,
-        },
-        autoflake_custom = {
-          command = 'autoflake',
-          args = {
-            '--remove-all-unused-imports',
-            '--remove-unused-variables',
-            '--expand-star-imports',
-            '--ignore-init-module-imports',
-            '-', -- important: tells autoflake to read from stdin
-          },
-        },
       },
     },
   },

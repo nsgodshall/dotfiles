@@ -118,7 +118,7 @@
   )
 
   # Defines character set used by powerlevel10k. It's best to let p10k configure set it for you.
-  typeset -g POWERLEVEL9K_MODE=nerdfont-complete
+  typeset -g POWERLEVEL9K_MODE=nerdfont-v3
   # When set to moderate, some icons will have an extra space after them. This is meant to avoid
   # icon overlap when using non-monospace fonts. When set to none, spaces are not added.
   typeset -g POWERLEVEL9K_ICON_PADDING=none
@@ -1688,7 +1688,7 @@
   #   - always:   Trim down prompt when accepting a command line.
   #   - same-dir: Trim down prompt when accepting a command line unless this is the first command
   #               typed after changing current working directory.
-  typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=off
+  typeset -g POWERLEVEL9K_TRANSIENT_PROMPT=same-dir
 
   # Instant prompt mode.
   #
