@@ -614,8 +614,7 @@ ensure_kickstart_modules() {
 }
 
 # init.lua does `{ import = "custom.plugins" }`, which errors out if the
-# directory does not exist. Seed it once and never touch it again: this is
-# the user's own plugin space, not ours.
+# directory does not exist.
 seed_custom_plugins_dir() {
     local custom_dir="$1/lua/custom/plugins"
 
@@ -653,7 +652,11 @@ setup_neovim_config() {
     mkdir -p "$config_dir"
 
     ensure_kickstart_modules "$config_dir"
-    seed_custom_plugins_dir "$config_dir"
+    if [ -d "$DOTFILES_DIR/lua/custom" ]; then
+        link_dotfile "$DOTFILES_DIR/lua/custom" "$config_dir/lua/custom" "nvim/lua/custom"
+    else
+        seed_custom_plugins_dir "$config_dir"
+    fi
     link_dotfile "$DOTFILES_DIR/init.lua" "$config_dir/init.lua" "nvim/init.lua"
 }
 

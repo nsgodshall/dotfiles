@@ -60,8 +60,8 @@ place — and it never aborts the whole run over one optional step.
    `tmux.conf` → `~/.tmux.conf`
 6. **Installs Kickstart's Lua modules** into `~/.config/nvim/lua/kickstart`, then
    links this repo's `init.lua` over the top
-7. **Seeds** `~/.config/nvim/lua/custom/plugins/` if absent — your own plugins go
-   there, and the script never overwrites it
+7. **Links custom Neovim Lua** from this repo (`lua/custom` → `~/.config/nvim/lua/custom`)
+   when present; otherwise seeds `~/.config/nvim/lua/custom/plugins/init.lua`
 8. **Installs the Nerd Font** into the right place for your OS
 9. **Sets zsh as the login shell**, unless it already is one
 10. **Reports next steps** — whether the login shell is zsh, and whether bash
@@ -100,7 +100,7 @@ that this config drives through `main`/`opts`.
 - **Prompt**: `p10k configure`
 - **Font**: `NERD_FONT_NAME=<FontName> ./install.sh` (defaults to Mononoki)
 - **Kickstart revision**: `KICKSTART_REF=<sha> ./install.sh`
-- **Your own Neovim plugins**: add them to `~/.config/nvim/lua/custom/plugins/`
+- **Your own Neovim plugins**: add them to `lua/custom/plugins/` in this repo
 
 ## Troubleshooting
 
