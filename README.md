@@ -46,9 +46,9 @@ place — and it never aborts the whole run over one optional step.
 1. **Checks the macOS toolchain** (Command Line Tools, Homebrew) and stops early
    with instructions if either is missing
 2. **Installs system packages** via apt, pacman or Homebrew — git, zsh, tmux,
-   ripgrep, fzf, a compiler and friends, plus flatpak on Linux. If a bulk
-   install fails it retries package by package, so one unavailable package no
-   longer kills the run
+   ripgrep, fzf, git-delta, a compiler and friends, plus flatpak on Linux. If
+   a bulk install fails it retries package by package, so one unavailable
+   package no longer kills the run
 3. **Installs Neovim** — from GitHub releases on Linux (`~/.local/neovim`,
    symlinked into `~/.local/bin`), Homebrew on macOS. The Debian/Ubuntu
    `neovim` package is deliberately *not* installed: it is 0.10.x, too old for
@@ -57,7 +57,8 @@ place — and it never aborts the whole run over one optional step.
    another nvim already installed
 4. **Verifies prerequisites** — git, zsh, nvim and a C compiler
 5. **Backs up and symlinks** `zshrc` → `~/.zshrc`, `p10k.zsh` → `~/.p10k.zsh`,
-   `tmux.conf` → `~/.tmux.conf`
+   `tmux.conf` → `~/.tmux.conf`, and `lazygit.yml` → Lazygit's OS-specific
+   config path (`~/.config/lazygit/config.yml` on Linux, `~/Library/Application Support/lazygit/config.yml` on macOS)
 6. **Installs Kickstart's Lua modules** into `~/.config/nvim/lua/kickstart`, then
    links this repo's `init.lua` over the top
 7. **Links custom Neovim Lua** from this repo (`lua/custom` → `~/.config/nvim/lua/custom`)
@@ -90,6 +91,7 @@ that this config drives through `main`/`opts`.
 - `zshrc` — zsh configuration
 - `p10k.zsh` — Powerlevel10k theme
 - `tmux.conf` — tmux configuration (optional)
+- `lazygit.yml` — Lazygit configuration
 - `init.lua` — Neovim configuration (optional)
 - `install.sh` — bootstrap script
 - `apt-packages.txt` — optional extras (toolchain, clipboard, LSP runtimes, CLI)

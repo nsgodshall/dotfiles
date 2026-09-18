@@ -125,6 +125,14 @@ have_c_compiler() {
         || command -v clang >/dev/null 2>&1
 }
 
+lazygit_config_target() {
+    if [ "$OS_NAME" = "Darwin" ]; then
+        printf '%s\n' "$HOME/Library/Application Support/lazygit/config.yml"
+    else
+        printf '%s\n' "$HOME/.config/lazygit/config.yml"
+    fi
+}
+
 # macOS needs the Command Line Tools for git and a C compiler; Homebrew
 # depends on them too. Check early so the failure is legible.
 check_macos_toolchain() {
@@ -222,17 +230,17 @@ install_system_packages() {
             # shadows the current build we fetch below in any shell that
             # does not put ~/.local/bin first.
             apt_install git zsh tmux curl wget ripgrep unzip tar \
-                fontconfig fzf gcc libpcre2-8-0 flatpak
+                fontconfig fzf gcc libpcre2-8-0 flatpak git-delta
             ;;
         pacman)
             pacman_install git zsh tmux curl wget ripgrep unzip tar neovim \
-                fontconfig fzf gcc pcre2 flatpak
+                fontconfig fzf gcc pcre2 flatpak git-delta
             ;;
         brew)
             # unzip and tar ship with macOS; fontconfig is not used there.
             # Compilers come from the Command Line Tools, not a gcc formula.
             # flatpak is Linux-only (bubblewrap/namespaces), so it is absent.
-            brew_install git zsh tmux curl wget ripgrep neovim fzf pcre2
+            brew_install git zsh tmux curl wget ripgrep neovim fzf pcre2 git-delta
             ;;
     esac
 
@@ -769,7 +777,7 @@ main() {
 
     link_dotfile "$DOTFILES_DIR/zshrc" "$HOME/.zshrc" "zshrc"
     link_dotfile "$DOTFILES_DIR/p10k.zsh" "$HOME/.p10k.zsh" "p10k.zsh"
-    link_dotfile "$DOTFILES_DIR/lazygit.yml" "$HOME/.config/lazygit/config.yml" "lazygit.yml"
+    link_dotfile "$DOTFILES_DIR/lazygit.yml" "$(lazygit_config_target)" "lazygit.yml"
 
     if [ -f "$DOTFILES_DIR/tmux.conf" ]; then
         link_dotfile "$DOTFILES_DIR/tmux.conf" "$HOME/.tmux.conf" "tmux.conf"
