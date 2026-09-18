@@ -766,6 +766,7 @@ main() {
 
     link_dotfile "$DOTFILES_DIR/zshrc" "$HOME/.zshrc" "zshrc"
     link_dotfile "$DOTFILES_DIR/p10k.zsh" "$HOME/.p10k.zsh" "p10k.zsh"
+    link_dotfile "$DOTFILES_DIR/lazygit.yml" "$HOME/.config/lazygit/config.yml" "lazygit.yml"
 
     if [ -f "$DOTFILES_DIR/tmux.conf" ]; then
         link_dotfile "$DOTFILES_DIR/tmux.conf" "$HOME/.tmux.conf" "tmux.conf"
