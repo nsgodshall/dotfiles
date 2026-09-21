@@ -234,6 +234,7 @@ alias l='ls -lh'
 alias v='nvim'
 alias vi='nvim'
 alias vim='nvim'
+alias j='z'
 
 alias ..='cd ..'
 alias ...='cd ../..'
