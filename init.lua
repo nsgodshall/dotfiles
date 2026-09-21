@@ -306,7 +306,8 @@ require('lazy').setup({
       require('telescope').setup {
         pickers = {
           find_files = {
-            hidden = true,
+            -- Include hidden and ignored files without indexing Git metadata.
+            find_command = { 'rg', '--files', '--hidden', '--no-ignore', '--glob', '!.git/*' },
           },
         },
         extensions = {
