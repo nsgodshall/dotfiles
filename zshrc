@@ -246,6 +246,7 @@ alias ga='git add'
 alias gc='git commit'
 alias gp='git push'
 alias gl='git pull'
+alias lg='lazygit'
 
 if [[ "$OSTYPE" == darwin* ]]; then
   alias update='brew update && brew upgrade'
