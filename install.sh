@@ -125,6 +125,14 @@ have_c_compiler() {
         || command -v clang >/dev/null 2>&1
 }
 
+lazygit_config_target() {
+    if [ "$OS_NAME" = "Darwin" ]; then
+        printf '%s\n' "$HOME/Library/Application Support/lazygit/config.yml"
+    else
+        printf '%s\n' "$HOME/.config/lazygit/config.yml"
+    fi
+}
+
 # macOS needs the Command Line Tools for git and a C compiler; Homebrew
 # depends on them too. Check early so the failure is legible.
 check_macos_toolchain() {
@@ -222,17 +230,17 @@ install_system_packages() {
             # shadows the current build we fetch below in any shell that
             # does not put ~/.local/bin first.
             apt_install git zsh tmux curl wget ripgrep unzip tar \
-                fontconfig fzf gcc libpcre2-8-0 flatpak
+                fontconfig fzf gcc libpcre2-8-0 flatpak git-delta
             ;;
         pacman)
             pacman_install git zsh tmux curl wget ripgrep unzip tar neovim \
-                fontconfig fzf gcc pcre2 flatpak
+                fontconfig fzf gcc pcre2 flatpak git-delta
             ;;
         brew)
             # unzip and tar ship with macOS; fontconfig is not used there.
             # Compilers come from the Command Line Tools, not a gcc formula.
             # flatpak is Linux-only (bubblewrap/namespaces), so it is absent.
-            brew_install git zsh tmux curl wget ripgrep neovim fzf pcre2
+            brew_install git zsh tmux curl wget ripgrep neovim fzf pcre2 git-delta
             ;;
     esac
 
@@ -614,8 +622,7 @@ ensure_kickstart_modules() {
 }
 
 # init.lua does `{ import = "custom.plugins" }`, which errors out if the
-# directory does not exist. Seed it once and never touch it again: this is
-# the user's own plugin space, not ours.
+# directory does not exist.
 seed_custom_plugins_dir() {
     local custom_dir="$1/lua/custom/plugins"
 
@@ -653,7 +660,11 @@ setup_neovim_config() {
     mkdir -p "$config_dir"
 
     ensure_kickstart_modules "$config_dir"
-    seed_custom_plugins_dir "$config_dir"
+    if [ -d "$DOTFILES_DIR/lua/custom" ]; then
+        link_dotfile "$DOTFILES_DIR/lua/custom" "$config_dir/lua/custom" "nvim/lua/custom"
+    else
+        seed_custom_plugins_dir "$config_dir"
+    fi
     link_dotfile "$DOTFILES_DIR/init.lua" "$config_dir/init.lua" "nvim/init.lua"
 }
 
@@ -766,6 +777,7 @@ main() {
 
     link_dotfile "$DOTFILES_DIR/zshrc" "$HOME/.zshrc" "zshrc"
     link_dotfile "$DOTFILES_DIR/p10k.zsh" "$HOME/.p10k.zsh" "p10k.zsh"
+    link_dotfile "$DOTFILES_DIR/lazygit.yml" "$(lazygit_config_target)" "lazygit.yml"
 
     if [ -f "$DOTFILES_DIR/tmux.conf" ]; then
         link_dotfile "$DOTFILES_DIR/tmux.conf" "$HOME/.tmux.conf" "tmux.conf"

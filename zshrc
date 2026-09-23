@@ -234,6 +234,7 @@ alias l='ls -lh'
 alias v='nvim'
 alias vi='nvim'
 alias vim='nvim'
+alias j='z'
 
 alias ..='cd ..'
 alias ...='cd ../..'
@@ -245,6 +246,7 @@ alias ga='git add'
 alias gc='git commit'
 alias gp='git push'
 alias gl='git pull'
+alias lg='lazygit'
 
 if [[ "$OSTYPE" == darwin* ]]; then
   alias update='brew update && brew upgrade'
@@ -311,3 +313,8 @@ export VISUAL='nvim'
 if [[ -f "$HOME/.local/bin/env" ]]; then
   source "$HOME/.local/bin/env"
 fi
+# The following lines have been added by Docker Desktop to enable Docker CLI completions.
+fpath=(/Users/ngodshall/.docker/completions $fpath)
+autoload -Uz compinit
+(( ${+_comps[docker]} )) || compinit
+# End of Docker CLI completions
