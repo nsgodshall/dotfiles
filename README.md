@@ -91,6 +91,8 @@ that this config drives through `main`/`opts`.
 - `zshrc` — zsh configuration
 - `p10k.zsh` — Powerlevel10k theme
 - `tmux.conf` — tmux configuration (optional)
+- `wezterm.lua` — WezTerm configuration; `install.sh` installs WezTerm (nightly)
+  on machines with a display
 - `lazygit.yml` — Lazygit configuration
 - `init.lua` — Neovim configuration (optional)
 - `install.sh` — bootstrap script

@@ -1,4 +1,18 @@
 # -----------------------------
+# Auto-start tmux
+# -----------------------------
+# Runs before the instant prompt so the outer shell never draws a prompt; exec
+# replaces it, so exiting tmux closes the terminal. Every terminal gets its own
+# new session, and destroy-unattached kills it when the window closes so they
+# don't pile up. Skipped when already inside tmux, over SSH, in editor-embedded
+# terminals, or with NO_TMUX=1.
+if [[ -o interactive && -t 0 && -z "$TMUX" && -z "$NO_TMUX" && -z "$SSH_CONNECTION" \
+      && "$TERM_PROGRAM" != vscode && "$TERMINAL_EMULATOR" != JetBrains-JediTerm \
+      && -z "$NVIM" && -z "$INSIDE_EMACS" ]] && (( $+commands[tmux] )); then
+  exec tmux new-session \; set-option destroy-unattached on
+fi
+
+# -----------------------------
 # Powerlevel10k Instant Prompt
 # -----------------------------
 # This must be at the very top. No output before this line.
@@ -155,7 +169,16 @@ zinit ice depth=1; zinit light romkatv/powerlevel10k
 zinit ice depth=1
 zinit light junegunn/fzf
 if [[ -o interactive ]] && (( $+commands[fzf] )); then
-  source <(fzf --zsh) 2>/dev/null
+  # `--zsh` needs fzf >= 0.48; older distro builds (e.g. Debian's 0.44) ship
+  # the integration as separate scripts instead.
+  if fzf --zsh &>/dev/null; then
+    source <(fzf --zsh)
+  else
+    for _f in /usr/share/doc/fzf/examples/{key-bindings,completion}.zsh; do
+      [[ -r $_f ]] && source $_f
+    done
+    unset _f
+  fi
 fi
 
 # fzf-tab routes *all* tab completion through fzf. Load order is fussy: it must
@@ -253,11 +276,9 @@ if ! command -v imv >/dev/null && command -v imv-wayland >/dev/null; then
   alias imv='imv-wayland'
 fi
 
-if [[ "$OSTYPE" == darwin* ]]; then
-  alias update='brew update && brew upgrade'
-else
-  alias update='sudo apt-get update && sudo apt-get upgrade -y'
-fi
+# Updates whichever package managers are installed; ~/.zshrc is a symlink
+# into the dotfiles repo, so resolve it to find update.sh.
+alias update="${${(%):-%x}:A:h}/update.sh"
 alias df='df -h'
 alias du='du -h'
 
@@ -323,3 +344,12 @@ fpath=(/Users/ngodshall/.docker/completions $fpath)
 autoload -Uz compinit
 (( ${+_comps[docker]} )) || compinit
 # End of Docker CLI completions
+
+# yazi: `y` opens yazi and cds into the last directory on exit
+function y() {
+	local tmp="$(mktemp -t "yazi-cwd.XXXXXX")" cwd
+	yazi "$@" --cwd-file="$tmp"
+	IFS= read -r -d '' cwd < "$tmp"
+	[ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
+	rm -f -- "$tmp"
+}
