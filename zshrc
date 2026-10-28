@@ -248,6 +248,11 @@ alias gp='git push'
 alias gl='git pull'
 alias lg='lazygit'
 
+# Ubuntu's imv package ships only imv-wayland/imv-x11, no plain `imv`
+if ! command -v imv >/dev/null && command -v imv-wayland >/dev/null; then
+  alias imv='imv-wayland'
+fi
+
 if [[ "$OSTYPE" == darwin* ]]; then
   alias update='brew update && brew upgrade'
 else
