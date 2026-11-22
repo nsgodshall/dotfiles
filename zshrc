@@ -238,10 +238,6 @@ if [[ -d "$PYENV_ROOT/bin" ]]; then
   fi
 fi
 
-# Ruby Gems
-export GEM_HOME="$HOME/gems"
-export PATH="$HOME/gems/bin:$PATH"
-
 # -----------------------------
 # Aliases
 # -----------------------------
@@ -353,3 +349,6 @@ function y() {
 	[ -n "$cwd" ] && [ "$cwd" != "$PWD" ] && builtin cd -- "$cwd"
 	rm -f -- "$tmp"
 }
+
+# Machine-local config that stays out of this repo
+[[ -r ~/.zshrc.local ]] && source ~/.zshrc.local
